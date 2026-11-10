@@ -1,4 +1,4 @@
-name: ScreenTextCopier CI
+name: ScreenTextCopier Build & Release
 
 on:
   push:
