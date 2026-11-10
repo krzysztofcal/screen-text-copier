@@ -33,6 +33,16 @@ find_apksigner() {
     command -v apksigner
     return 0
   fi
+  for candidate in \
+    "${ANDROID_HOME:-}/build-tools/34.0.0/apksigner" \
+    "/usr/local/lib/android/sdk/build-tools/34.0.0/apksigner" \
+    "${ANDROID_SDK_ROOT:-}/build-tools/34.0.0/apksigner"
+  do
+    if [ -f "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
   for dir in \
     "${ANDROID_HOME:-}/build-tools" \
     "${ANDROID_SDK_ROOT:-}/build-tools" \
@@ -42,10 +52,10 @@ find_apksigner() {
     "/home/runner/android-sdk/build-tools"
   do
     if [ -d "$dir" ]; then
-      local candidate
-      candidate=$(find "$dir" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
-      if [ -n "$candidate" ]; then
-        echo "$candidate"
+      local cand
+      cand=$(find "$dir" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
+      if [ -n "$cand" ]; then
+        echo "$cand"
         return 0
       fi
     fi
@@ -60,7 +70,7 @@ if [ -z "$APKSIGNER" ]; then
   exit 1
 fi
 
-chmod +x "$APKSIGNER" || true
+chmod +x "$APKSIGNER" 2>/dev/null || true
 
 echo "[verify-apk-signature] Tool: $APKSIGNER"
 echo "[verify-apk-signature] Target APK: $APK_PATH"
@@ -83,9 +93,9 @@ if ! echo "$VERIFY_OUTPUT" | grep -q "Verifies"; then
   exit 1
 fi
 
-# Extract Signer #1 certificate SHA-256 digest
-ACTUAL_SHA256=$(echo "$VERIFY_OUTPUT" | grep -i "Signer #1 certificate SHA-256 digest:" | head -n 1 | awk '{print $NF}' | tr '[:upper:]' '[:lower:]' | tr -d ':')
-NORMALIZED_EXPECTED=$(echo "$EXPECTED_SHA256" | tr '[:upper:]' '[:lower:]' | tr -d ':')
+# Extract certificate SHA-256 digest
+ACTUAL_SHA256=$(echo "$VERIFY_OUTPUT" | grep -i "certificate SHA-256" | head -n 1 | awk -F: '{print $NF}' | tr -d ' \t\r\n:' | tr '[:upper:]' '[:lower:]' || true)
+NORMALIZED_EXPECTED=$(echo "$EXPECTED_SHA256" | tr -d ' \t\r\n:' | tr '[:upper:]' '[:lower:]')
 
 if [ -z "$ACTUAL_SHA256" ]; then
   echo "::error::[verify-apk-signature] Could not extract certificate SHA-256 digest from apksigner output." >&2

@@ -24,6 +24,16 @@ find_apksigner() {
     command -v apksigner
     return 0
   fi
+  for candidate in \
+    "${ANDROID_HOME:-}/build-tools/34.0.0/apksigner" \
+    "/usr/local/lib/android/sdk/build-tools/34.0.0/apksigner" \
+    "${ANDROID_SDK_ROOT:-}/build-tools/34.0.0/apksigner"
+  do
+    if [ -f "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
   for dir in \
     "${ANDROID_HOME:-}/build-tools" \
     "${ANDROID_SDK_ROOT:-}/build-tools" \
@@ -33,10 +43,10 @@ find_apksigner() {
     "/home/runner/android-sdk/build-tools"
   do
     if [ -d "$dir" ]; then
-      local candidate
-      candidate=$(find "$dir" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
-      if [ -n "$candidate" ]; then
-        echo "$candidate"
+      local cand
+      cand=$(find "$dir" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
+      if [ -n "$cand" ]; then
+        echo "$cand"
         return 0
       fi
     fi
@@ -53,7 +63,7 @@ if [ -z "$APKSIGNER" ]; then
   exit 1
 fi
 
-chmod +x "$APKSIGNER" || true
+chmod +x "$APKSIGNER" 2>/dev/null || true
 echo "Using apksigner: $APKSIGNER"
 echo "Inspecting sample APK: $SIGNED_APK"
 
@@ -62,17 +72,20 @@ RAW_VERIFY=$("$APKSIGNER" verify --verbose --print-certs "$SIGNED_APK" 2>&1)
 VERIFY_STATUS=$?
 set -e
 
+echo "=== RAW APKSIGNER VERIFY OUTPUT ==="
+echo "$RAW_VERIFY"
+echo "=== END RAW APKSIGNER VERIFY OUTPUT ==="
+
 if [ $VERIFY_STATUS -ne 0 ]; then
   echo "Error: Initial verification of sample APK failed (status $VERIFY_STATUS):" >&2
   echo "$RAW_VERIFY" >&2
   exit 1
 fi
 
-ACTUAL_FP=$(echo "$RAW_VERIFY" | grep -i "Signer #1 certificate SHA-256 digest:" | head -n 1 | awk '{print $NF}' | tr '[:upper:]' '[:lower:]' | tr -d ':')
+ACTUAL_FP=$(echo "$RAW_VERIFY" | grep -i "certificate SHA-256" | head -n 1 | awk -F: '{print $NF}' | tr -d ' \t\r\n:' | tr '[:upper:]' '[:lower:]' || true)
 
 if [ -z "$ACTUAL_FP" ]; then
-  echo "Error: Could not extract certificate SHA-256 digest from apksigner output:" >&2
-  echo "$RAW_VERIFY" >&2
+  echo "Error: Could not extract certificate SHA-256 digest from apksigner output." >&2
   exit 1
 fi
 
