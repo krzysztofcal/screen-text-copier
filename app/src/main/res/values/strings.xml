@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ScreenTextCopier</string>
-    <string name="subtitle_header">Dla programistów • 1 klik • bez OCR</string>
-    <string name="accessibility_service_description">Jednym kliknięciem kopiuje tekst udostępniany przez interfejs aplikacji, np. komendy i logi z terminala. Bez OCR i uprawnienia INTERNET.</string>
+    <string name="subtitle_header">For developers • One tap • No OCR</string>
+    <string name="accessibility_service_description">Copy accessible screen text, including terminal commands and logs, with one tap. No OCR or INTERNET permission.</string>
 
     <!-- UI Strings -->
-    <string name="title_status">Stan usługi</string>
-    <string name="status_service_active">Usługa aktywna</string>
-    <string name="status_service_inactive">Usługa nieaktywna</string>
-    <string name="desc_service_inactive">Włącz usługę ułatwień dostępu, aby pływający przycisk mógł działać ponad innymi aplikacjami.</string>
-    <string name="desc_service_active">Usługa działa w tle (bez uprawnień sieciowych) i oczekuje na kliknięcie przycisku.</string>
+    <string name="title_status">Service status</string>
+    <string name="status_service_active">Service active</string>
+    <string name="status_service_inactive">Service inactive</string>
+    <string name="desc_service_inactive">Enable the Accessibility service to display the floating button over other apps.</string>
+    <string name="desc_service_active">The service is running without network permission and waits for you to tap the button.</string>
 
-    <string name="btn_open_accessibility">Otwórz ustawienia ułatwień dostępu</string>
-    <string name="btn_enable_service">Włącz usługę w systemie</string>
+    <string name="btn_open_accessibility">Open Accessibility settings</string>
+    <string name="btn_enable_service">Enable service in settings</string>
 
-    <string name="switch_floating_button">Pływający przycisk na ekranie</string>
-    <string name="desc_switch_floating">Szybkie ukrywanie lub pokazywanie widżetu bez wyłączania całej usługi</string>
+    <string name="switch_floating_button">Floating button on screen</string>
+    <string name="desc_switch_floating">Show or hide the button without disabling the Accessibility service</string>
 
     <!-- Restricted Settings Helper (Android 13+) -->
-    <string name="title_restricted_settings">Ograniczone ustawienie na Androidzie 13/14?</string>
-    <string name="desc_restricted_settings">Dla aplikacji instalowanych poza Sklepem Play system może wyświetlić komunikat: „To ustawienie jest obecnie niedostępne”. Aby odblokować usługę:\n1. Kliknij poniższy przycisk „Informacje o aplikacji”.\n2. Kliknij menu 3 kropek (⋮) w prawym górnym rogu.\n3. Wybierz „Zezwalaj na ograniczone ustawienia” i potwierdź kodem PIN lub biometrią.</string>
-    <string name="btn_open_app_info">Otwórz informacje o aplikacji</string>
+    <string name="title_restricted_settings">Restricted Settings on Android 13+?</string>
+    <string name="desc_restricted_settings">Apps installed outside Google Play may show a restricted settings warning. If the option is available on your device:\n1. Tap App info below.\n2. Open the three-dot menu (⋮) in the upper-right corner.\n3. Choose Allow restricted settings and confirm with your PIN or biometrics.</string>
+    <string name="btn_open_app_info">Open app info</string>
 
     <!-- Guide -->
-    <string name="title_quick_guide">Instrukcja obsługi</string>
-    <string name="guide_tap_title">👆 1-Klik (Tapnięcie)</string>
-    <string name="guide_tap_desc">Kopiuje widoczny tekst udostępniany przez aplikację, np. komendy i logi z Termuxa, do schowka. Bez rozpoznawania OCR.</string>
-    <string name="guide_drag_title">✋ Przesuwanie (Drag)</string>
-    <string name="guide_drag_desc">Dotknij i przeciągnij pływający przycisk w dowolne wygodne miejsce na krawędzi ekranu.</string>
-    <string name="guide_long_title">⏳ Długie przytrzymanie (Long Press)</string>
-    <string name="guide_long_desc">Przytrzymaj widżet przez pół sekundy, aby natychmiast wrócić do aplikacji i zarządzać ustawieniami.</string>
-    <string name="guide_privacy_title">🛡️ 100% Zero Network</string>
-    <string name="guide_privacy_desc">Aplikacja nie posiada uprawnienia INTERNET. Żadne dane nie opuszczają urządzenia.</string>
+    <string name="title_quick_guide">How to use</string>
+    <string name="guide_tap_title">👆 One tap</string>
+    <string name="guide_tap_desc">Copies accessible text from the visible screen, including Termux commands and logs, to the clipboard. No OCR.</string>
+    <string name="guide_drag_title">✋ Drag</string>
+    <string name="guide_drag_desc">Touch and drag the floating button to a convenient position near either screen edge.</string>
+    <string name="guide_long_title">⏳ Long press</string>
+    <string name="guide_long_desc">Hold the button for about half a second to return to ScreenTextCopier settings.</string>
+    <string name="guide_privacy_title">🛡️ Zero Network</string>
+    <string name="guide_privacy_desc">The app has no INTERNET permission and does not transmit screen text. Other apps may access the system clipboard.</string>
 
     <!-- Test & Clipboard Area (Security Hardened) -->
-    <string name="title_test_area">Bezpieczna inspekcja schowka</string>
-    <string name="btn_paste_test">Pobierz stan schowka</string>
-    <string name="btn_toggle_preview_show">Pokaż jawną treść</string>
-    <string name="btn_toggle_preview_hide">Ukryj treść</string>
-    <string name="btn_clear_preview">Wyczyść podgląd</string>
-    <string name="test_hint">Kliknij „Pobierz stan schowka”, aby sprawdzić liczbę linii i znaków. Wrażliwa treść jest domyślnie maskowana.</string>
-    <string name="empty_clipboard">Schowek jest pusty.</string>
-    <string name="clipboard_masked_summary">Zabezpieczono: %1$d linii (%2$d znaków).\nTreść jest ukryta, aby chronić poufne dane.</string>
+    <string name="title_test_area">Private clipboard inspection</string>
+    <string name="btn_paste_test">Inspect clipboard</string>
+    <string name="btn_toggle_preview_show">Show content</string>
+    <string name="btn_toggle_preview_hide">Hide content</string>
+    <string name="btn_clear_preview">Clear preview</string>
+    <string name="test_hint">Tap Inspect clipboard to see line and character counts. Clipboard content is masked by default.</string>
+    <string name="empty_clipboard">The clipboard is empty.</string>
+    <string name="clipboard_masked_summary">Protected: %1$d lines (%2$d characters).\nContent is hidden to protect sensitive data.</string>
 
     <!-- Toast messages -->
-    <string name="toast_copied_format">Skopiowano %d linii tekstu do schowka</string>
-    <string name="toast_no_text">Nie znaleziono tekstu na ekranie</string>
-    <string name="toast_widget_hidden">Ukryto pływający przycisk</string>
-    <string name="toast_long_press">Otwarto ustawienia ScreenTextCopier</string>
+    <string name="toast_copied_format">Copied %d lines of text to clipboard</string>
+    <string name="toast_no_text">No accessible text found on screen</string>
+    <string name="toast_widget_hidden">Floating button hidden</string>
+    <string name="toast_long_press">ScreenTextCopier settings opened</string>
 </resources>
