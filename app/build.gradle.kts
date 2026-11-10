@@ -18,8 +18,15 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            // Standard Android debug keystore
+        create("release") {
+            storeFile = rootProject.file("keystore/release.p12")
+            storePassword = "screentextcopier"
+            keyAlias = "screentextcopier"
+            keyPassword = "screentextcopier"
+            storeType = "PKCS12"
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
@@ -27,11 +34,11 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("release")
         }
         release {
             isMinifyEnabled = false
-            // Signed with debug key for direct installation by the user
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
