@@ -1,6 +1,8 @@
 # ScreenTextCopier 📱✂️
 
-Natywna, lekka aplikacja na Androida w języku **Kotlin** z architekturą **Zero Network**, umożliwiająca natychmiastowe kopiowanie całego tekstu z aktywnego ekranu do schowka za pomocą jednego kliknięcia w pływający przycisk.
+Natywna, lekka aplikacja na Androida w języku **Kotlin** z architekturą **Zero Network**, umożliwiająca natychmiastowe kopiowanie całego tekstu z aktywnego ekranu do schowka systemowego za pomocą jednego tapnięcia w pływający przycisk.
+
+Aplikacja operuje bezpośrednio na drzewie widoków ułatwień dostępu (`AccessibilityNodeInfo`), wyciągając tekst i opisy interfejsu. **Nie wykonuje OCR** (rozpoznawania tekstu z pikseli graficznych) i nie wymaga żadnych ciężkich silników rozpoznawania obrazu.
 
 ---
 
@@ -8,41 +10,78 @@ Natywna, lekka aplikacja na Androida w języku **Kotlin** z architekturą **Zero
 
 1. **1-Klik Kopiowanie Tekstu (On-Demand Extraction)**:
    - Jedno tapnięcie w mały, półprzezroczysty pływający przycisk skanuje aktualnie widoczne drzewo widoków (`AccessibilityNodeInfo`).
-   - Ekstrahuje widoczne teksty (`node.text`) oraz opisy ułatwień dostępu (`node.contentDescription`).
-   - Automatycznie usuwa duplikaty i scala linie tekstu do schowka systemowego (`ClipboardManager`).
+   - Ekstrahuje widoczne teksty (`node.text`) oraz etykiety ułatwień dostępu (`node.contentDescription`).
+   - Automatycznie usuwa duplikaty z zachowaniem kolejności i scala linie tekstu do schowka systemowego (`ClipboardManager`).
    - Wyświetla krótki Toast z informacją o liczbie skopiowanych linii.
 
 2. **Bezpieczeństwo i Prywatność (Zero Network)**:
    - W manifeście kategorycznie **brak uprawnienia `android.permission.INTERNET`**.
    - Zero bibliotek sieciowych, analitycznych lub telemetrycznych — czysty Android SDK i AndroidX.
-   - Metoda `onAccessibilityEvent` w serwisie jest **całkowicie pusta** — aplikacja nie monitoruje działań użytkownika w tle, a ekran jest skanowany wyłącznie w chwili fizycznego kliknięcia w przycisk.
+   - Subskrypcja zdarzeń ułatwień dostępu jest zminimalizowana do zera (`eventTypes = 0`, puste `onAccessibilityEvent`) — aplikacja nie monitoruje działań użytkownika w tle, a ekran jest skanowany wyłącznie w chwili fizycznego kliknięcia w przycisk.
+   - Na Androidzie 13+ (API 33+) schowek jest oznaczany flagą `ClipDescription.EXTRA_IS_SENSITIVE`, co zapobiega wyciekom wrażliwych danych w systemowych nakładkach schowka.
+   - Wbudowany w aplikacji podgląd schowka domyślnie maskuje treść i wymaga świadomego kliknięcia, aby odsłonić dane.
 
 3. **Pływający Przycisk (`TYPE_ACCESSIBILITY_OVERLAY`)**:
-   - Nie wymaga inwazyjnego uprawnienia `SYSTEM_ALERT_WINDOW` (wyświetlanie nad innymi aplikacjami) — wykorzystuje wbudowaną nakładkę ułatwień dostępu `TYPE_ACCESSIBILITY_OVERLAY` i `FLAG_NOT_FOCUSABLE`.
+   - Nie wymaga inwazyjnego uprawnienia `SYSTEM_ALERT_WINDOW` — wykorzystuje nakładkę ułatwień dostępu `TYPE_ACCESSIBILITY_OVERLAY` i `FLAG_NOT_FOCUSABLE`.
    - Obsługa gestów:
      - **Tap**: natychmiastowe skopiowanie tekstu z ekranu.
-     - **Drag**: płynne przesuwanie przycisku z automatycznym przyciąganiem do najbliższej krawędzi ekranu.
-     - **Long Press**: szybkie przejście do ekranu głównego aplikacji (`MainActivity`), aby wyłączyć lub zmienić opcje.
+     - **Drag**: płynne przesuwanie przycisku z ograniczeniem do widocznego obszaru ekranu (zabezpieczenie przed ucieczką poza ekran).
+     - **Snap-to-edge**: automatyczne przyciąganie do lewej lub prawej krawędzi po zakończeniu przeciągania.
+     - **Long Press**: szybkie przejście do ekranu głównego aplikacji (`MainActivity`), aby zmienić opcje lub ukryć przycisk.
 
 4. **Wygodna Kontrola (`MainActivity`)**:
    - Przycisk szybkiego przejścia do ustawień systemowych ułatwień dostępu Androida (`Settings.ACTION_ACCESSIBILITY_SETTINGS`).
    - Przełącznik (Switch zapisywany w `SharedPreferences` i nasłuchiwany w czasie rzeczywistym) pozwalający ukryć pływający przycisk bez wyłączania całej usługi w systemie.
-   - Podgląd i weryfikacja zawartości schowka na żywo.
+   - Dedykowany moduł pomocniczy dla urządzeń z Androidem 13 i 14 (Restricted Settings).
+   - Bezpieczna inspekcja schowka z maskowaniem wrażliwych danych.
 
 ---
 
-## 🛠️ Architektura i Wymagania
+## 🛡️ Instalacja poza Google Play (Android 13/14+ Restricted Settings)
 
-- **Język**: Kotlin
-- **Compile SDK**: 34 (Android 14)
-- **Min SDK**: 26 (Android 8.0 Oreo)
-- **Java**: JDK 17
-- **Gradle**: 8.7 (Kotlin DSL `build.gradle.kts`)
-- **CI/CD**: Automatyczny build debug i release APK przez GitHub Actions (`gradle/actions/setup-gradle@v3`).
+Google Play Protect oraz system Android 13+ nakładają restrykcje na aplikacje instalowane poza sklepem (`sideloaded`), które rejestrują usługi ułatwień dostępu:
+
+1. **Instalacja pliku APK**:
+   Jeśli Google Play Protect zablokuje instalację:
+   - Wejdź w **Sklep Google Play** $\to$ **Profil** $\to$ **Play Protect** $\to$ **Ustawienia (zębatka)**.
+   - Wyłącz tymczasowo opcję *„Skanuj aplikacje przy użyciu Play Protect”*.
+   - Zainstaluj pobrany plik `.apk` z folderu *Pobrane*.
+2. **Odblokowanie usługi (Ograniczone ustawienie)**:
+   - Po zainstalowaniu wejdź w: **Ustawienia telefonu** $\to$ **Aplikacje** $\to$ **ScreenTextCopier** (w aplikacji dostępny jest również bezpośredni przycisk).
+   - Kliknij **menu trzech kropek (⋮)** w prawym górnym rogu.
+   - Wybierz **„Zezwalaj na ograniczone ustawienia”** (*Allow restricted settings*) i potwierdź tożsamość PIN-em / odciskiem palca.
+   - Teraz przejdź do *Ułatwień dostępu* i włącz usługę.
 
 ---
 
-## 📦 Pobieranie i Instalacja
+## 🧪 Plan Smoke Testów na Rzeczywistym Androidzie
 
-Gotowy plik `.apk` jest budowany automatycznie przy każdym pushu przez GitHub Actions i dostępny w zakładce **Actions** oraz **Releases**.
-Zarówno wersja `debug`, jak i `release` są wstępnie podpisane, dzięki czemu plik `.apk` można zainstalować bezpośrednio na telefonie bez dodatkowych konfiguracji.
+Przed wdrożeniem produkcyjnym przeprowadź weryfikację na fizycznym urządzeniu wg poniższego scenariusza:
+
+| Krok | Akcja testera | Oczekiwany rezultat |
+| :--- | :--- | :--- |
+| **ST-01** | Instalacja `ScreenTextCopier-debug.apk` lub podpisanej wersji release. | Instalator pakietów kończy instalację z sukcesem, ikona aplikacji wyświetla się poprawnie w launcherze. |
+| **ST-02** | Pierwsze uruchomienie `MainActivity`. | Stan usługi wskazuje *Usługa nieaktywna* (czerwony badge). Na Androidzie 13+ widoczna jest sekcja z instrukcją Restricted Settings. |
+| **ST-03** | Kliknięcie *„Włącz usługę w systemie”* i aktywacja w Ułatwieniach dostępu. | Po włączeniu usługi na ekranie natychmiast pojawia się mały, półprzezroczysty pływający przycisk. W `MainActivity` stan zmienia się na zielony (*Usługa aktywna*). |
+| **ST-04** | Przeciąganie pływającego przycisku po ekranie. | Przycisk płynnie porusza się za palcem. Nie można go przeciągnąć poza krawędzie ekranu ani pod pasek stanu. Po puszczeniu przycisk płynnie dokuje się do najbliższej krawędzi (snap-to-edge). |
+| **ST-05** | Ekstrakcja tekstu (1-tap) w przeglądarce / aplikacji z tekstem. | Krótkie tapnięcie w przycisk wyświetla Toast (np. *„Skopiowano X linii tekstu do schowka”*). |
+| **ST-06** | Weryfikacja schowka w edytorze notatek. | Wklejenie ze schowka wkleja odczytany tekst, bez zduplikowanych linii, rozdzielony znakami nowej linii. |
+| **ST-07** | Bezpieczny podgląd w `MainActivity`. | Kliknięcie *„Pobierz stan schowka”* wyświetla bezpieczne podsumowanie liczby linii i znaków (treść zamaskowana). Kliknięcie *„Pokaż jawną treść”* odsłania tekst. Kliknięcie *„Wyczyść podgląd”* usuwa go z ekranu. |
+| **ST-08** | Długie przytrzymanie (Long Press) przycisku. | Przytrzymanie przez 0.5 s wywołuje delikatną animację i natychmiast otwiera `MainActivity`. |
+| **ST-09** | Wyłączenie przełącznika *„Pływający przycisk na ekranie”* w `MainActivity`. | Przycisk natychmiast znika z ekranu bez konieczności wyłączania usługi w ustawieniach systemowych. Ponowne włączenie przełącznika przywraca przycisk na zapamiętaną pozycję. |
+
+---
+
+## 🛠️ Konfiguracja Podpisywania i CI/CD
+
+- **Budowanie w CI**:
+  Workflow [`.github/workflows/build.yml`](.github/workflows/build.yml) działa z uprawnieniem `contents: read`, uruchamia testy jednostkowe `testDebugUnitTest` oraz kompiluje pakiety APK.
+- **Bezpieczne podpisywanie Release**:
+  Projekt nie przechowuje prywatnych kluczy w repozytorium. Konfiguracja podpisu produkcyjnego w `app/build.gradle.kts` pobiera ścieżki i hasła ze zmiennych środowiskowych:
+  - `RELEASE_KEYSTORE_PATH`
+  - `RELEASE_KEYSTORE_PASSWORD`
+  - `RELEASE_KEY_ALIAS`
+  - `RELEASE_KEY_PASSWORD`
+  W przypadku braku tych zmiennych w środowisku deweloperskim, wersja release pozostaje niepodpisana (lub używana jest wersja debug).
+- **Publikacja Release**:
+  Oddzielne zadanie `publish-release` (z uprawnieniem `contents: write`) uruchamiane jest wyłącznie przy wypchnięciu taga wersji (np. `git tag v1.0.1 && git push origin v1.0.1`), a nie przy zwykłym pushu do gałęzi `main`.
