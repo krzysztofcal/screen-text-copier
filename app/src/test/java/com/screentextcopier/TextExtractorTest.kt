@@ -110,9 +110,9 @@ class TextExtractorTest {
 
     @Test
     fun testFormatCountMessage() {
-        assertEquals("Nie znaleziono tekstu na ekranie", TextExtractor.formatCountMessage(0))
-        assertEquals("Skopiowano 1 linię tekstu do schowka", TextExtractor.formatCountMessage(1))
-        assertEquals("Skopiowano 5 linii tekstu do schowka", TextExtractor.formatCountMessage(5))
+        assertEquals("No accessible text found on screen", TextExtractor.formatCountMessage(0))
+        assertEquals("Copied 1 line of text to clipboard", TextExtractor.formatCountMessage(1))
+        assertEquals("Copied 5 lines of text to clipboard", TextExtractor.formatCountMessage(5))
     }
 
     @Test
