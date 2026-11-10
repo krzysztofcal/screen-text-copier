@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ScreenTextCopier</string>
+    <string name="accessibility_service_description">Pozwala na błyskawiczne odczytywanie i kopiowanie widocznego tekstu z ekranu za pomocą 1 kliknięcia w pływający przycisk. Bezpieczeństwo Zero Network – brak uprawnień sieciowych.</string>
+
+    <!-- UI Strings -->
+    <string name="title_status">Stan usługi</string>
+    <string name="status_service_active">Usługa aktywna</string>
+    <string name="status_service_inactive">Usługa nieaktywna</string>
+    <string name="desc_service_inactive">Włącz usługę ułatwień dostępu, aby pływający przycisk mógł działać ponad innymi aplikacjami.</string>
+    <string name="desc_service_active">Usługa działa w tle (bez uprawnień sieciowych) i oczekuje na kliknięcie przycisku.</string>
+
+    <string name="btn_open_accessibility">Otwórz ustawienia ułatwień dostępu</string>
+    <string name="btn_enable_service">Włącz usługę w systemie</string>
+
+    <string name="switch_floating_button">Pływający przycisk na ekranie</string>
+    <string name="desc_switch_floating">Szybkie ukrywanie lub pokazywanie widżetu bez wyłączania całej usługi</string>
+
+    <string name="title_quick_guide">Instrukcja obsługi</string>
+    <string name="guide_tap_title">1-Klik (Tapnięcie)</string>
+    <string name="guide_tap_desc">Błyskawicznie skanuje widoczny ekran i kopiuje cały tekst do schowka systemowego.</string>
+    <string name="guide_drag_title">Przesuwanie (Drag)</string>
+    <string name="guide_drag_desc">Dotknij i przeciągnij pływający przycisk w dowolne wygodne miejsce na krawędzi ekranu.</string>
+    <string name="guide_long_title">Długie przytrzymanie (Long Press)</string>
+    <string name="guide_long_desc">Przytrzymaj widżet przez pół sekundy, aby natychmiast wrócić do aplikacji i zarządzać ustawieniami.</string>
+    <string name="guide_privacy_title">100% Zero Network</string>
+    <string name="guide_privacy_desc">Aplikacja nie posiada uprawnienia INTERNET. Żadne dane nie opuszczają urządzenia.</string>
+
+    <string name="title_test_area">Schowek i test</string>
+    <string name="btn_paste_test">Sprawdź zawartość schowka</string>
+    <string name="test_hint">Po kliknięciu pływającego przycisku na dowolnym ekranie, kliknij tutaj, aby zobaczyć skopiowany tekst.</string>
+    <string name="empty_clipboard">Schowek jest pusty.</string>
+
+    <!-- Toast messages -->
+    <string name="toast_copied_format">Skopiowano %d linii tekstu do schowka</string>
+    <string name="toast_no_text">Nie znaleziono tekstu na ekranie</string>
+    <string name="toast_widget_hidden">Ukryto pływający przycisk</string>
+    <string name="toast_long_press">Otwarto ustawienia ScreenTextCopier</string>
+</resources>
