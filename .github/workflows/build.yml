@@ -38,12 +38,18 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Ensure gradlew is executable
-        run: chmod +x gradlew || true
+      - name: Ensure gradlew and scripts are executable
+        run: |
+          chmod +x gradlew || true
+          chmod +x scripts/*.sh || true
 
       - name: Run Unit Tests and Build APKs
         run: |
           gradle testDebugUnitTest assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Test APK Signature Validation Suite (Cases: Valid, Unsigned, Wrong Cert, Missing Cert)
+        run: |
+          ./scripts/test-apk-signature-validation.sh app/build/outputs/apk/debug/app-debug.apk
 
       - name: Package Artifacts and Compute Checksums
         id: package_artifacts
@@ -97,9 +103,10 @@ jobs:
       - name: Validate Release Signature (Fail-Closed)
         run: |
           set -euo pipefail
-          RELEASE_APK="artifacts/ScreenTextCopier-release.apk"
+          chmod +x scripts/verify-apk-signature.sh
 
           # 1. Require that signed release APK exists
+          RELEASE_APK="artifacts/ScreenTextCopier-release.apk"
           if [ ! -f "$RELEASE_APK" ]; then
             echo "::error::Signed release APK ($RELEASE_APK) does not exist! Release publication blocked (fail-closed)."
             exit 1
@@ -111,15 +118,9 @@ jobs:
             exit 1
           fi
 
-          # 3. Verify digital signature presence
-          SIG_FILES=$(unzip -l "$RELEASE_APK" | grep -E "META-INF/.*\.(RSA|DSA|EC|SF)" || true)
-          if [ -z "$SIG_FILES" ]; then
-            echo "::error::Release APK signature verification failed: No valid signature block found! Publication aborted."
-            exit 1
-          fi
-
-          echo "Release APK signature verified successfully:"
-          echo "$SIG_FILES"
+          # 3. Cryptographically verify signature and pin certificate SHA-256
+          EXPECTED_SHA256="${{ secrets.RELEASE_SIGNER_SHA256 || vars.RELEASE_SIGNER_SHA256 }}"
+          ./scripts/verify-apk-signature.sh "$RELEASE_APK" "$EXPECTED_SHA256"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
