@@ -1,6 +1,10 @@
 # ScreenTextCopier 📱✂️
 
-Natywna, lekka aplikacja na Androida w języku **Kotlin** z architekturą **Zero Network**, umożliwiająca natychmiastowe kopiowanie całego tekstu z aktywnego ekranu do schowka systemowego za pomocą jednego tapnięcia w pływający przycisk.
+**ScreenTextCopier** to lekkie, natywne narzędzie na Androida dla programistów — szczególnie przydatne podczas **vibe codingu** i pracy z asystentami AI. Jednym dotknięciem pływającego przycisku kopiuje tekst udostępniony przez aktualnie widoczny interfejs do schowka, aby szybko przenieść **komendy, logi, komunikaty błędów i fragmenty kodu** z terminala (np. Termuxa) do edytora lub rozmowy z AI.
+
+**Priorytetem jest wierność tekstu źródłowego, zwłaszcza w przypadku logów i poleceń powłoki.** Aplikacja odczytuje tekst bezpośrednio przez Android Accessibility, zamiast rozpoznawać znaki ze zrzutów ekranu. Dzięki temu nie wprowadza typowych błędów OCR, np. zamiany `0` na `O` czy `1` na `l`. Kopiowanie zależy jednak od tego, jaki tekst dana aplikacja udostępnia przez Accessibility — nie obejmuje automatycznie napisów osadzonych w obrazach ani historii terminala poza ekranem.
+
+Aplikacja działa w architekturze **Zero Network**: nie żąda uprawnienia `INTERNET` i nie korzysta z OCR.
 
 Aplikacja operuje bezpośrednio na drzewie widoków ułatwień dostępu (`AccessibilityNodeInfo`), wyciągając tekst i opisy interfejsu. **Nie wykonuje OCR** (rozpoznawania tekstu z pikseli graficznych) i nie wymaga żadnych ciężkich silników rozpoznawania obrazu.
 
