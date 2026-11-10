@@ -48,7 +48,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Zero Network • 1-Click OCR / Screen Text"
+                    android:text="@string/subtitle_header"
                     android:textColor="@color/accent"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -164,6 +164,48 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Android 13/14 Restricted Settings Helper Card -->
+        <LinearLayout
+            android:id="@+id/card_restricted_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title_restricted_settings"
+                android:textColor="@color/accent_light"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/desc_restricted_settings"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"
+                android:layout_marginBottom="14dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_open_app_info"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:backgroundTint="@color/surface_card_stroke"
+                android:text="@string/btn_open_app_info"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                app:cornerRadius="10dp"
+                app:icon="@drawable/ic_power"
+                app:iconTint="@color/accent" />
+        </LinearLayout>
+
         <!-- Quick Guide Card -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -186,7 +228,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="👆 @string/guide_tap_title"
+                android:text="@string/guide_tap_title"
                 android:textColor="@color/primary_light"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -203,7 +245,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✋ @string/guide_drag_title"
+                android:text="@string/guide_drag_title"
                 android:textColor="@color/primary_light"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -220,7 +262,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⏳ @string/guide_long_title"
+                android:text="@string/guide_long_title"
                 android:textColor="@color/primary_light"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -237,7 +279,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🛡️ @string/guide_privacy_title"
+                android:text="@string/guide_privacy_title"
                 android:textColor="@color/status_active"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -250,7 +292,7 @@
                 android:layout_marginTop="2dp" />
         </LinearLayout>
 
-        <!-- Test & Clipboard Card -->
+        <!-- Test & Clipboard Card (Security Hardened) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -294,6 +336,42 @@
                 android:padding="12dp"
                 android:maxLines="8"
                 android:ellipsize="end" />
+
+            <!-- Row for Toggle & Clear -->
+            <LinearLayout
+                android:id="@+id/layout_preview_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_toggle_preview"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:backgroundTint="@color/surface_card_stroke"
+                    android:text="@string/btn_toggle_preview_show"
+                    android:textColor="@color/text_secondary"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_clear_preview"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:backgroundTint="@color/surface_card_stroke"
+                    android:text="@string/btn_clear_preview"
+                    android:textColor="@color/status_inactive"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>

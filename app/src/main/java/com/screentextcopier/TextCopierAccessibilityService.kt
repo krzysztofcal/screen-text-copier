@@ -2,10 +2,13 @@ package com.screentextcopier
 
 import android.accessibilityservice.AccessibilityService
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
+import android.os.PersistableBundle
 import android.preference.PreferenceManager
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
@@ -17,9 +20,9 @@ import android.widget.Toast
  *
  * PRIVACY & SECURITY (Zero Network):
  * - No internet permission exists in this application.
- * - [onAccessibilityEvent] is strictly EMPTY. The service does not passively
- *   monitor or log user activity.
- * - Screen hierarchy is accessed only when the user explicitly taps the floating button.
+ * - Passive event subscription is strictly minimized (eventTypes = 0).
+ *   [onAccessibilityEvent] is strictly EMPTY and no background monitoring occurs.
+ * - Screen hierarchy is accessed ONLY when the user explicitly taps the floating button.
  */
 class TextCopierAccessibilityService : AccessibilityService(),
     SharedPreferences.OnSharedPreferenceChangeListener {
@@ -38,6 +41,17 @@ class TextCopierAccessibilityService : AccessibilityService(),
     override fun onServiceConnected() {
         super.onServiceConnected()
         isServiceRunning = true
+
+        // Minimize accessibility event subscription to zero:
+        // We do not listen to passive events in background.
+        try {
+            val info = serviceInfo
+            if (info != null) {
+                info.eventTypes = 0
+                serviceInfo = info
+            }
+        } catch (_: Exception) {
+        }
 
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -83,26 +97,21 @@ class TextCopierAccessibilityService : AccessibilityService(),
      * Traverses the active window hierarchy and copies all visible text into Clipboard.
      */
     private fun extractAndCopyScreenText() {
-        val collectedTexts = LinkedHashSet<String>()
+        val rawPairs = mutableListOf<Pair<CharSequence?, CharSequence?>>()
 
         fun extractFromNode(node: AccessibilityNodeInfo?) {
             if (node == null) return
             try {
-                // Only consider nodes visible to the user
                 if (!node.isVisibleToUser) {
                     return
                 }
 
-                // Extract text if present
-                val text = node.text?.toString()?.trim()
-                if (!text.isNullOrEmpty()) {
-                    collectedTexts.add(text)
-                }
+                val text = TextExtractor.cleanText(node.text)
+                val desc = TextExtractor.cleanText(node.contentDescription)
 
-                // Extract contentDescription if distinct and non-empty
-                val desc = node.contentDescription?.toString()?.trim()
-                if (!desc.isNullOrEmpty() && desc != text) {
-                    collectedTexts.add(desc)
+                // Only record pairs that contain actual usable text or description
+                if (text != null || desc != null) {
+                    rawPairs.add(text to desc)
                 }
 
                 val childCount = node.childCount
@@ -129,8 +138,8 @@ class TextCopierAccessibilityService : AccessibilityService(),
             }
         }
 
-        // 2. Fallback / Multi-window: if root was null or empty, iterate through interactive windows
-        if (collectedTexts.isEmpty()) {
+        // 2. Fallback / Multi-window: if no usable text was collected from root, iterate through interactive windows
+        if (rawPairs.isEmpty()) {
             try {
                 val currentWindows = windows
                 for (window in currentWindows) {
@@ -145,18 +154,28 @@ class TextCopierAccessibilityService : AccessibilityService(),
             }
         }
 
-        if (collectedTexts.isEmpty()) {
+        val processedItems = TextExtractor.processExtractedItems(rawPairs)
+
+        if (processedItems.isEmpty()) {
             Toast.makeText(this, getString(R.string.toast_no_text), Toast.LENGTH_SHORT).show()
             return
         }
 
-        val joinedText = collectedTexts.joinToString("\n")
+        val joinedText = TextExtractor.formatClipboardText(processedItems)
 
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("ScreenTextCopier", joinedText)
+
+        // Protect sensitive text on Android 13+ (API 33+) from system overlay leaks
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            clip.description.extras = PersistableBundle().apply {
+                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+
         clipboard.setPrimaryClip(clip)
 
-        val count = collectedTexts.size
+        val count = processedItems.size
         val message = getString(R.string.toast_copied_format, count)
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }

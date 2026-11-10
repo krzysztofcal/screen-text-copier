@@ -14,13 +14,14 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import kotlin.math.abs
 
 /**
- * Manages rendering, touch handling, dragging, edge snapping,
+ * Manages rendering, touch handling, dragging, boundary constraints, edge snapping,
  * and click / long-press callbacks for the floating overlay button.
  */
 class FloatingWidgetManager(
@@ -36,10 +37,14 @@ class FloatingWidgetManager(
     private val handler = Handler(Looper.getMainLooper())
     private var isLongPressed = false
 
+    private data class SystemInsets(val top: Int, val bottom: Int, val left: Int, val right: Int)
+
     companion object {
         private const val KEY_POS_X = "floating_pos_x"
         private const val KEY_POS_Y = "floating_pos_y"
         private const val DEFAULT_POS_Y = 400
+        private const val EDGE_MARGIN_PX = 16
+        private const val ESTIMATED_VIEW_SIZE_PX = 160
     }
 
     val isVisible: Boolean
@@ -53,10 +58,14 @@ class FloatingWidgetManager(
         val view = inflater.inflate(R.layout.layout_floating_widget, null)
         val iconView = view.findViewById<ImageView>(R.id.floating_icon)
 
-        val screenWidth = getScreenWidth()
-        val defaultX = screenWidth - 160 // Near right edge by default
-        val savedX = prefs.getInt(KEY_POS_X, defaultX)
-        val savedY = prefs.getInt(KEY_POS_Y, DEFAULT_POS_Y)
+        val insets = getSystemInsets()
+        val (screenWidth, screenHeight) = getScreenDimensions()
+        val defaultX = (screenWidth - ESTIMATED_VIEW_SIZE_PX - insets.right - EDGE_MARGIN_PX).coerceAtLeast(insets.left + EDGE_MARGIN_PX)
+        val rawSavedX = prefs.getInt(KEY_POS_X, defaultX)
+        val rawSavedY = prefs.getInt(KEY_POS_Y, DEFAULT_POS_Y)
+
+        val clampedX = clampX(rawSavedX, ESTIMATED_VIEW_SIZE_PX, screenWidth, insets)
+        val clampedY = clampY(rawSavedY, ESTIMATED_VIEW_SIZE_PX, screenHeight, insets)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -68,8 +77,8 @@ class FloatingWidgetManager(
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = savedX
-            y = savedY
+            x = clampedX
+            y = clampedY
         }
 
         setupTouchListener(view, iconView, params)
@@ -113,7 +122,6 @@ class FloatingWidgetManager(
 
         val longPressRunnable = Runnable {
             isLongPressed = true
-            // Visual subtle scale indicator
             iconView.animate().scaleX(1.15f).scaleY(1.15f).setDuration(120).withEndAction {
                 iconView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
             }.start()
@@ -130,9 +138,7 @@ class FloatingWidgetManager(
                     isDragging = false
                     isLongPressed = false
 
-                    // Slight feedback shrink on touch down
                     iconView.animate().scaleX(0.92f).scaleY(0.92f).setDuration(80).start()
-
                     handler.postDelayed(longPressRunnable, longPressTimeout)
                     true
                 }
@@ -147,8 +153,13 @@ class FloatingWidgetManager(
                     }
 
                     if (isDragging) {
-                        params.x = initialX + deltaX.toInt()
-                        params.y = initialY + deltaY.toInt()
+                        val insets = getSystemInsets()
+                        val (screenWidth, screenHeight) = getScreenDimensions()
+                        val viewWidth = rootView.width.takeIf { it > 0 } ?: ESTIMATED_VIEW_SIZE_PX
+                        val viewHeight = rootView.height.takeIf { it > 0 } ?: ESTIMATED_VIEW_SIZE_PX
+
+                        params.x = clampX(initialX + deltaX.toInt(), viewWidth, screenWidth, insets)
+                        params.y = clampY(initialY + deltaY.toInt(), viewHeight, screenHeight, insets)
 
                         try {
                             windowManager.updateViewLayout(rootView, params)
@@ -168,7 +179,7 @@ class FloatingWidgetManager(
                         // 1-Click Tap -> Extract Text!
                         onClick()
                     } else {
-                        // Drag completed -> Snap to nearest edge
+                        // Drag completed -> Snap to nearest edge within bounds
                         snapToNearestEdge(rootView, params)
                     }
                     true
@@ -186,13 +197,23 @@ class FloatingWidgetManager(
     }
 
     private fun snapToNearestEdge(view: View, params: WindowManager.LayoutParams) {
-        val screenWidth = getScreenWidth()
-        val viewWidth = view.width.takeIf { it > 0 } ?: 160
+        val insets = getSystemInsets()
+        val (screenWidth, screenHeight) = getScreenDimensions()
+        val viewWidth = view.width.takeIf { it > 0 } ?: ESTIMATED_VIEW_SIZE_PX
+        val viewHeight = view.height.takeIf { it > 0 } ?: ESTIMATED_VIEW_SIZE_PX
+
+        val minSnapX = insets.left + EDGE_MARGIN_PX
+        val maxSnapX = (screenWidth - viewWidth - insets.right - EDGE_MARGIN_PX).coerceAtLeast(minSnapX)
+
         val targetX = if (params.x + viewWidth / 2 < screenWidth / 2) {
-            16 // Snap to left edge with small margin
+            minSnapX
         } else {
-            screenWidth - viewWidth - 16 // Snap to right edge with small margin
+            maxSnapX
         }
+
+        // Clamp Y against actual system insets
+        val targetY = clampY(params.y, viewHeight, screenHeight, insets)
+        params.y = targetY
 
         val animator = ValueAnimator.ofInt(params.x, targetX)
         animator.duration = 180
@@ -206,22 +227,54 @@ class FloatingWidgetManager(
         }
         animator.start()
 
-        // Persist coordinates
+        // Persist validated coordinates
         prefs.edit()
             .putInt(KEY_POS_X, targetX)
-            .putInt(KEY_POS_Y, params.y)
+            .putInt(KEY_POS_Y, targetY)
             .apply()
     }
 
-    @Suppress("DEPRECATION")
-    private fun getScreenWidth(): Int {
+    private fun clampX(x: Int, viewWidth: Int, screenWidth: Int, insets: SystemInsets): Int {
+        val minX = insets.left
+        val maxX = (screenWidth - viewWidth - insets.right).coerceAtLeast(minX)
+        return x.coerceIn(minX, maxX)
+    }
+
+    private fun clampY(y: Int, viewHeight: Int, screenHeight: Int, insets: SystemInsets): Int {
+        val minY = insets.top
+        val maxY = (screenHeight - viewHeight - insets.bottom).coerceAtLeast(minY)
+        return y.coerceIn(minY, maxY)
+    }
+
+    private fun getSystemInsets(): SystemInsets {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val metrics = windowManager.currentWindowMetrics
-            metrics.bounds.width()
+            val insets = windowManager.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
+            )
+            SystemInsets(
+                top = insets.top,
+                bottom = insets.bottom,
+                left = insets.left,
+                right = insets.right
+            )
+        } else {
+            val topId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+            val top = if (topId > 0) context.resources.getDimensionPixelSize(topId) else 48
+            val navId = context.resources.getIdentifier("navigation_bar_height", "dimen", "android")
+            val bottom = if (navId > 0) context.resources.getDimensionPixelSize(navId) else 48
+            SystemInsets(top = top, bottom = bottom, left = 0, right = 0)
+        }
+    }
+
+    private fun getScreenDimensions(): Pair<Int, Int> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.currentWindowMetrics.bounds
+            Pair(bounds.width(), bounds.height())
         } else {
             val size = Point()
+            @Suppress("DEPRECATION")
             windowManager.defaultDisplay.getSize(size)
-            size.x
+            Pair(size.x, size.y)
         }
     }
 }
