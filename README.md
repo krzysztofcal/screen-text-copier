@@ -37,20 +37,15 @@ Aplikacja operuje bezpośrednio na drzewie widoków ułatwień dostępu (`Access
 
 ---
 
-## 🛡️ Instalacja poza Google Play (Android 13/14+ Restricted Settings)
+## 🛡️ Android 13/14+ Restricted Settings (Odblokowanie ułatwień dostępu)
 
-Google Play Protect oraz system Android 13+ nakładają restrykcje na aplikacje instalowane poza sklepem (`sideloaded`), które rejestrują usługi ułatwień dostępu:
+Na systemach Android 13 i 14 usługi ułatwień dostępu dla aplikacji instalowanych poza oficjalnym sklepem są domyślnie blokowane przez wbudowany mechanizm bezpieczeństwa systemu (*Restricted Settings*).
 
-1. **Instalacja pliku APK**:
-   Jeśli Google Play Protect zablokuje instalację:
-   - Wejdź w **Sklep Google Play** $\to$ **Profil** $\to$ **Play Protect** $\to$ **Ustawienia (zębatka)**.
-   - Wyłącz tymczasowo opcję *„Skanuj aplikacje przy użyciu Play Protect”*.
-   - Zainstaluj pobrany plik `.apk` z folderu *Pobrane*.
-2. **Odblokowanie usługi (Ograniczone ustawienie)**:
-   - Po zainstalowaniu wejdź w: **Ustawienia telefonu** $\to$ **Aplikacje** $\to$ **ScreenTextCopier** (w aplikacji dostępny jest również bezpośredni przycisk).
-   - Kliknij **menu trzech kropek (⋮)** w prawym górnym rogu.
-   - Wybierz **„Zezwalaj na ograniczone ustawienia”** (*Allow restricted settings*) i potwierdź tożsamość PIN-em / odciskiem palca.
-   - Teraz przejdź do *Ułatwień dostępu* i włącz usługę.
+Aby odblokować działanie usługi:
+1. Po standardowej instalacji pakietu `.apk` przejdź do: **Ustawienia telefonu** $\to$ **Aplikacje** $\to$ **ScreenTextCopier** (lub kliknij dedykowany przycisk *„Otwórz informacje o aplikacji”* w `MainActivity`).
+2. Kliknij **menu trzech kropek (⋮)** w prawym górnym rogu ekranu Informacji o aplikacji.
+3. Wybierz opcję **„Zezwalaj na ograniczone ustawienia”** (*Allow restricted settings*) i potwierdź tożsamość odciskiem palca lub kodem PIN.
+4. Przejdź do *Ułatwień dostępu* i włącz usługę ScreenTextCopier — pływający przycisk pojawi się na ekranie.
 
 ---
 

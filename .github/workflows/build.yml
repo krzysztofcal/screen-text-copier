@@ -52,10 +52,9 @@ jobs:
           mkdir -p artifacts
           cp app/build/outputs/apk/debug/app-debug.apk artifacts/ScreenTextCopier-debug.apk
 
+          # Only copy release APK if signed app-release.apk was produced by Gradle
           if [ -f app/build/outputs/apk/release/app-release.apk ]; then
             cp app/build/outputs/apk/release/app-release.apk artifacts/ScreenTextCopier-release.apk
-          elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp app/build/outputs/apk/release/app-release-unsigned.apk artifacts/ScreenTextCopier-release-unsigned.apk
           fi
 
           (cd artifacts && sha256sum *.apk > SHA256SUMS)
@@ -95,6 +94,33 @@ jobs:
           name: ScreenTextCopier-APKs
           path: artifacts
 
+      - name: Validate Release Signature (Fail-Closed)
+        run: |
+          set -euo pipefail
+          RELEASE_APK="artifacts/ScreenTextCopier-release.apk"
+
+          # 1. Require that signed release APK exists
+          if [ ! -f "$RELEASE_APK" ]; then
+            echo "::error::Signed release APK ($RELEASE_APK) does not exist! Release publication blocked (fail-closed)."
+            exit 1
+          fi
+
+          # 2. Strictly disallow any unsigned APK artifacts in release bundle
+          if ls artifacts/*unsigned*.apk 1>/dev/null 2>&1; then
+            echo "::error::Unsigned APK found in release artifacts! Release publication blocked (fail-closed)."
+            exit 1
+          fi
+
+          # 3. Verify digital signature presence
+          SIG_FILES=$(unzip -l "$RELEASE_APK" | grep -E "META-INF/.*\.(RSA|DSA|EC|SF)" || true)
+          if [ -z "$SIG_FILES" ]; then
+            echo "::error::Release APK signature verification failed: No valid signature block found! Publication aborted."
+            exit 1
+          fi
+
+          echo "Release APK signature verified successfully:"
+          echo "$SIG_FILES"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -102,7 +128,8 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            artifacts/ScreenTextCopier-*.apk
+            artifacts/ScreenTextCopier-release.apk
+            artifacts/ScreenTextCopier-debug.apk
             artifacts/SHA256SUMS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

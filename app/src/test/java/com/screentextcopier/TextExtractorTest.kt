@@ -1,6 +1,7 @@
 package com.screentextcopier
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -22,6 +23,48 @@ class TextExtractorTest {
         )
         val result = TextExtractor.processExtractedItems(input)
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun testHasUsableTextValidation() {
+        assertFalse(TextExtractor.hasUsableText(null, null))
+        assertFalse(TextExtractor.hasUsableText("", ""))
+        assertFalse(TextExtractor.hasUsableText("   ", "\n\t  "))
+        assertTrue(TextExtractor.hasUsableText("Hello", null))
+        assertTrue(TextExtractor.hasUsableText(null, "Icon description"))
+        assertTrue(TextExtractor.hasUsableText("  Trimmed  ", "Description"))
+    }
+
+    @Test
+    fun testAccessibilityFallbackRegressionPrevented() {
+        // Scenario: Active window has only empty/container nodes (e.g. FrameLayouts, ViewGroups)
+        val emptyRootNodes = listOf(
+            null to null,
+            "   " to null,
+            "" to "",
+            null to "   "
+        )
+
+        // Filter usable items as done in the service
+        val usableRootItems = emptyRootNodes.filter { (text, desc) ->
+            TextExtractor.hasUsableText(text, desc)
+        }
+
+        // Must be empty so the service correctly triggers the fallback to secondary windows!
+        assertTrue(usableRootItems.isEmpty())
+
+        // Simulated secondary window content
+        val secondaryWindowNodes = listOf(
+            "Dialog Title" to null,
+            "Confirm" to "Click to proceed"
+        )
+        val usableSecondaryItems = secondaryWindowNodes.filter { (text, desc) ->
+            TextExtractor.hasUsableText(text, desc)
+        }
+
+        // Processing should now succeed with secondary window content
+        val processed = TextExtractor.processExtractedItems(usableSecondaryItems)
+        assertEquals(listOf("Dialog Title", "Confirm", "Click to proceed"), processed)
     }
 
     @Test

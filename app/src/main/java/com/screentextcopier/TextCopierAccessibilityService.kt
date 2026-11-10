@@ -106,7 +106,13 @@ class TextCopierAccessibilityService : AccessibilityService(),
                     return
                 }
 
-                rawPairs.add(node.text to node.contentDescription)
+                val text = TextExtractor.cleanText(node.text)
+                val desc = TextExtractor.cleanText(node.contentDescription)
+
+                // Only record pairs that contain actual usable text or description
+                if (text != null || desc != null) {
+                    rawPairs.add(text to desc)
+                }
 
                 val childCount = node.childCount
                 for (i in 0 until childCount) {
@@ -132,7 +138,7 @@ class TextCopierAccessibilityService : AccessibilityService(),
             }
         }
 
-        // 2. Fallback / Multi-window: if root was null or empty, iterate through interactive windows
+        // 2. Fallback / Multi-window: if no usable text was collected from root, iterate through interactive windows
         if (rawPairs.isEmpty()) {
             try {
                 val currentWindows = windows

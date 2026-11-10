@@ -42,6 +42,22 @@ class MainActivity : AppCompatActivity() {
         updateServiceStatus()
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Automatically hide and mask sensitive clipboard contents when the user leaves the application
+        maskSensitivePreview()
+    }
+
+    private fun maskSensitivePreview() {
+        val raw = cachedClipboardRawText
+        if (raw != null && isClipboardRevealed) {
+            isClipboardRevealed = false
+            val (lines, chars) = TextExtractor.computeTextMetadata(raw)
+            binding.tvClipboardPreview.text = getString(R.string.clipboard_masked_summary, lines, chars)
+            binding.btnTogglePreview.text = getString(R.string.btn_toggle_preview_show)
+        }
+    }
+
     private fun setupButtons() {
         // Direct link to system Accessibility Settings
         binding.btnAccessibilitySettings.setOnClickListener {

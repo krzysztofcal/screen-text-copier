@@ -15,6 +15,13 @@ object TextExtractor {
     }
 
     /**
+     * Checks if either text or contentDescription contains non-blank usable information.
+     */
+    fun hasUsableText(text: CharSequence?, contentDescription: CharSequence?): Boolean {
+        return cleanText(text) != null || cleanText(contentDescription) != null
+    }
+
+    /**
      * Filters, cleans, and deduplicates pairs of (text, contentDescription),
      * preserving original appearance order.
      *
