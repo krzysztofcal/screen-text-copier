@@ -60,9 +60,9 @@ object TextExtractor {
      */
     fun formatCountMessage(count: Int): String {
         return when (count) {
-            0 -> "Nie znaleziono tekstu na ekranie"
-            1 -> "Skopiowano 1 linię tekstu do schowka"
-            else -> "Skopiowano $count linii tekstu do schowka"
+            0 -> "No accessible text found on screen"
+            1 -> "Copied 1 line of text to clipboard"
+            else -> "Copied $count lines of text to clipboard"
         }
     }
 
