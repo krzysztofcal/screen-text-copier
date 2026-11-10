@@ -76,13 +76,40 @@ jobs:
           echo "RELEASE_KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
           echo "Keystore successfully restored to secure runner temporary directory."
 
-      - name: Run Unit Tests and Build APKs
+      - name: Run Unit Tests and Build APKs (PR and Main Branch - Zero Secrets)
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        run: |
+          set -euo pipefail
+
+          # Assert that no release signing secrets or keystores exist in the environment
+          if [ -n "${RELEASE_KEYSTORE_PASSWORD:-}" ] || \
+             [ -n "${RELEASE_KEY_PASSWORD:-}" ] || \
+             [ -n "${RELEASE_KEY_ALIAS:-}" ] || \
+             [ -n "${RELEASE_KEYSTORE_PATH:-}" ] || \
+             [ -n "${RELEASE_KEYSTORE_BASE64:-}" ] || \
+             [ -n "${RELEASE_SIGNER_SHA256:-}" ]; then
+            echo "::error::Security violation: Release signing secrets or keystore path detected in non-release build environment!"
+            exit 1
+          fi
+
+          echo "Verified: Non-release build running with ZERO signing secrets in environment."
+          gradle testDebugUnitTest assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Run Unit Tests and Build Signed Release APK (Release Tag Only)
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
-          RELEASE_KEYSTORE_PATH: ${{ env.RELEASE_KEYSTORE_PATH || '' }}
+          RELEASE_KEYSTORE_PATH: ${{ env.RELEASE_KEYSTORE_PATH }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
+
+          if [ -z "$RELEASE_KEYSTORE_PATH" ] || [ ! -f "$RELEASE_KEYSTORE_PATH" ]; then
+            echo "::error::Release build failed: Release keystore file not found at $RELEASE_KEYSTORE_PATH (fail-closed)."
+            exit 1
+          fi
+
           gradle testDebugUnitTest assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Validate Built Release APK Signature (Release Tag Only)
