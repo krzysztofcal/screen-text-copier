@@ -19,46 +19,81 @@ if [ -z "$SIGNED_APK" ] || [ ! -f "$SIGNED_APK" ]; then
   exit 1
 fi
 
-# Locate apksigner to extract legitimate fingerprint for Test 1
-APKSIGNER=""
-if which apksigner >/dev/null 2>&1; then
-  APKSIGNER="apksigner"
-elif [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/build-tools" ]; then
-  APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
-elif [ -d "/usr/local/lib/android/sdk/build-tools" ]; then
-  APKSIGNER=$(find "/usr/local/lib/android/sdk/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
-fi
+find_apksigner() {
+  if command -v apksigner >/dev/null 2>&1; then
+    command -v apksigner
+    return 0
+  fi
+  for dir in \
+    "${ANDROID_HOME:-}/build-tools" \
+    "${ANDROID_SDK_ROOT:-}/build-tools" \
+    "/usr/local/lib/android/sdk/build-tools" \
+    "/opt/android-sdk/build-tools" \
+    "/opt/android/build-tools" \
+    "/home/runner/android-sdk/build-tools"
+  do
+    if [ -d "$dir" ]; then
+      local candidate
+      candidate=$(find "$dir" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
+      if [ -n "$candidate" ]; then
+        echo "$candidate"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
 
-if [ -z "$APKSIGNER" ] || [ ! -x "$APKSIGNER" ]; then
-  echo "Error: apksigner not found for running signature validation tests." >&2
+echo "=== APK Signature Validation Test Suite Initialization ==="
+echo "Resolving apksigner..."
+APKSIGNER=$(find_apksigner || true)
+
+if [ -z "$APKSIGNER" ]; then
+  echo "Error: apksigner binary could not be found." >&2
   exit 1
 fi
 
-ACTUAL_FP=$("$APKSIGNER" verify --verbose --print-certs "$SIGNED_APK" | grep -i "Signer #1 certificate SHA-256 digest:" | head -n 1 | awk '{print $NF}' | tr '[:upper:]' '[:lower:]' | tr -d ':')
+chmod +x "$APKSIGNER" || true
+echo "Using apksigner: $APKSIGNER"
+echo "Inspecting sample APK: $SIGNED_APK"
+
+set +e
+RAW_VERIFY=$("$APKSIGNER" verify --verbose --print-certs "$SIGNED_APK" 2>&1)
+VERIFY_STATUS=$?
+set -e
+
+if [ $VERIFY_STATUS -ne 0 ]; then
+  echo "Error: Initial verification of sample APK failed (status $VERIFY_STATUS):" >&2
+  echo "$RAW_VERIFY" >&2
+  exit 1
+fi
+
+ACTUAL_FP=$(echo "$RAW_VERIFY" | grep -i "Signer #1 certificate SHA-256 digest:" | head -n 1 | awk '{print $NF}' | tr '[:upper:]' '[:lower:]' | tr -d ':')
+
 if [ -z "$ACTUAL_FP" ]; then
-  echo "Error: Could not extract fingerprint from sample signed APK." >&2
+  echo "Error: Could not extract certificate SHA-256 digest from apksigner output:" >&2
+  echo "$RAW_VERIFY" >&2
   exit 1
 fi
 
+echo "Detected certificate SHA-256 fingerprint: $ACTUAL_FP"
 echo "=========================================================="
-echo "Starting APK Signature Validation Test Suite"
-echo "Target sample APK: $SIGNED_APK"
-echo "Detected certificate fingerprint: $ACTUAL_FP"
-echo "=========================================================="
+echo "Executing test scenarios..."
 
 # ------------------------------------------------------------------
 # Test 1: Valid signature + matching certificate SHA-256
 # ------------------------------------------------------------------
 echo -n "[Test 1/4] Valid signature & matching SHA-256: "
 set +e
-"$VERIFY_SCRIPT" "$SIGNED_APK" "$ACTUAL_FP" > /tmp/test1.log 2>&1
+T1_OUTPUT=$("$VERIFY_SCRIPT" "$SIGNED_APK" "$ACTUAL_FP" 2>&1)
 T1_EXIT=$?
 set -e
+
 if [ $T1_EXIT -eq 0 ]; then
   echo "PASSED (exit code 0 as expected)"
 else
   echo "FAILED (expected 0, got $T1_EXIT)"
-  cat /tmp/test1.log
+  echo "$T1_OUTPUT"
   exit 1
 fi
 
@@ -67,12 +102,20 @@ fi
 # ------------------------------------------------------------------
 echo -n "[Test 2/4] Unsigned APK (Must fail-closed): "
 UNSIGNED_APK="/tmp/test_unsigned_$$.apk"
-cp "$SIGNED_APK" "$UNSIGNED_APK"
-# Strip all META-INF signature files to make it unsigned
-zip -d "$UNSIGNED_APK" "META-INF/*" >/dev/null 2>&1 || true
+
+# Strip all META-INF signature files using Python zipfile (zero external tool dependency)
+python3 - "$SIGNED_APK" "$UNSIGNED_APK" << 'EOF'
+import sys, zipfile
+src = sys.argv[1]
+dst = sys.argv[2]
+with zipfile.ZipFile(src, 'r') as zin, zipfile.ZipFile(dst, 'w') as zout:
+    for item in zin.infolist():
+        if not item.filename.startswith('META-INF/'):
+            zout.writestr(item, zin.read(item.filename))
+EOF
 
 set +e
-"$VERIFY_SCRIPT" "$UNSIGNED_APK" "$ACTUAL_FP" > /tmp/test2.log 2>&1
+T2_OUTPUT=$("$VERIFY_SCRIPT" "$UNSIGNED_APK" "$ACTUAL_FP" 2>&1)
 T2_EXIT=$?
 set -e
 rm -f "$UNSIGNED_APK"
@@ -81,7 +124,7 @@ if [ $T2_EXIT -ne 0 ]; then
   echo "PASSED (failed-closed with code $T2_EXIT as expected)"
 else
   echo "FAILED (expected non-zero exit code for unsigned APK!)"
-  cat /tmp/test2.log
+  echo "$T2_OUTPUT"
   exit 1
 fi
 
@@ -91,14 +134,15 @@ fi
 echo -n "[Test 3/4] Valid signature & wrong SHA-256 (Must fail-closed): "
 WRONG_FP="00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 set +e
-"$VERIFY_SCRIPT" "$SIGNED_APK" "$WRONG_FP" > /tmp/test3.log 2>&1
+T3_OUTPUT=$("$VERIFY_SCRIPT" "$SIGNED_APK" "$WRONG_FP" 2>&1)
 T3_EXIT=$?
 set -e
+
 if [ $T3_EXIT -ne 0 ]; then
   echo "PASSED (failed-closed with code $T3_EXIT as expected)"
 else
   echo "FAILED (expected non-zero exit code for mismatched fingerprint!)"
-  cat /tmp/test3.log
+  echo "$T3_OUTPUT"
   exit 1
 fi
 
@@ -107,14 +151,15 @@ fi
 # ------------------------------------------------------------------
 echo -n "[Test 4/4] Missing certificate SHA-256 (Must fail-closed): "
 set +e
-"$VERIFY_SCRIPT" "$SIGNED_APK" "" > /tmp/test4.log 2>&1
+T4_OUTPUT=$("$VERIFY_SCRIPT" "$SIGNED_APK" "" 2>&1)
 T4_EXIT=$?
 set -e
+
 if [ $T4_EXIT -ne 0 ]; then
   echo "PASSED (failed-closed with code $T4_EXIT as expected)"
 else
   echo "FAILED (expected non-zero exit code for missing fingerprint!)"
-  cat /tmp/test4.log
+  echo "$T4_OUTPUT"
   exit 1
 fi
 

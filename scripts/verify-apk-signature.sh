@@ -28,19 +28,39 @@ if [ -z "$EXPECTED_SHA256" ]; then
 fi
 
 # Locate apksigner binary
-APKSIGNER=""
-if which apksigner >/dev/null 2>&1; then
-  APKSIGNER="apksigner"
-elif [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/build-tools" ]; then
-  APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
-elif [ -d "/usr/local/lib/android/sdk/build-tools" ]; then
-  APKSIGNER=$(find "/usr/local/lib/android/sdk/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
-fi
+find_apksigner() {
+  if command -v apksigner >/dev/null 2>&1; then
+    command -v apksigner
+    return 0
+  fi
+  for dir in \
+    "${ANDROID_HOME:-}/build-tools" \
+    "${ANDROID_SDK_ROOT:-}/build-tools" \
+    "/usr/local/lib/android/sdk/build-tools" \
+    "/opt/android-sdk/build-tools" \
+    "/opt/android/build-tools" \
+    "/home/runner/android-sdk/build-tools"
+  do
+    if [ -d "$dir" ]; then
+      local candidate
+      candidate=$(find "$dir" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
+      if [ -n "$candidate" ]; then
+        echo "$candidate"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
 
-if [ -z "$APKSIGNER" ] || [ ! -x "$APKSIGNER" ]; then
+APKSIGNER=$(find_apksigner || true)
+
+if [ -z "$APKSIGNER" ]; then
   echo "::error::[verify-apk-signature] apksigner binary could not be located in environment. Verification failed-closed." >&2
   exit 1
 fi
+
+chmod +x "$APKSIGNER" || true
 
 echo "[verify-apk-signature] Tool: $APKSIGNER"
 echo "[verify-apk-signature] Target APK: $APK_PATH"
@@ -80,5 +100,5 @@ if [ "$ACTUAL_SHA256" != "$NORMALIZED_EXPECTED" ]; then
   exit 1
 fi
 
-echo "✓ APK signature cryptographically verified. Signer #1 certificate SHA-256: $ACTUAL_SHA256"
+echo "[verify-apk-signature] SUCCESS: APK is cryptographically verified with matching pinned SHA-256 fingerprint: $ACTUAL_SHA256"
 exit 0
